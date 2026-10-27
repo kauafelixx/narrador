@@ -1,0 +1,65 @@
+/* Fonte, cores e acessibilidade. */
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("/gradio_api/file=assets/fonts/Montserrat-Variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root, .dark {
+  color-scheme: light;
+  --studio-orange: #c94a0a;
+  --studio-orange-hover: #aa3c05;
+  --studio-tint: #fff3e8;
+  --studio-ink: #263241;
+  --studio-muted: #667180;
+  --studio-line: #e5e9ee;
+}
+
+html, body { background: #f7f8fa !important; }
+body { margin: 0; }
+.gradio-container {
+  width: 100% !important;
+  box-sizing: border-box;
+  max-width: 1320px !important;
+  margin: 0 auto !important;
+  padding: 0 clamp(12px, 3vw, 40px) 28px !important;
+  font-family: "Montserrat", Arial, sans-serif !important;
+  color: var(--studio-ink);
+  --layout-gap: clamp(16px, 2vw, 20px);
+}
+/* O espaçamento externo é definido aqui, sem o padding duplicado do Gradio. */
+.gradio-container > .main.app {
+  padding: 0 !important;
+  width: 100%;
+  max-width: none !important;
+}
+.gradio-container *, .gradio-container *::before, .gradio-container *::after {
+  box-sizing: border-box;
+}
+.gradio-container button, .gradio-container input, .gradio-container textarea,
+.gradio-container select { font-family: inherit !important; }
+.gradio-container .prose { max-width: 100%; }
+.gradio-container .prose { overflow-wrap: break-word; }
+.gradio-container .prose p { line-height: 1.65; }
+.gradio-container button { touch-action: manipulation; }
+.gradio-container :is(button, input, textarea, select):focus-visible {
+  outline: 3px solid #c94a0a !important;
+  outline-offset: 3px;
+}
+.gradio-container :is(input, textarea)::placeholder { color: #747e8a !important; }
+.gradio-container .block { min-width: 0; }
+
+/* Os Forms automáticos do Gradio não devem criar um painel compacto cinza. */
+:is(#editor, #resultado-painel, #desempenho) .form {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  gap: 18px !important;
+  overflow: visible !important;
+  min-width: 0;
+}

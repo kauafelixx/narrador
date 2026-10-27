@@ -1,0 +1,3 @@
+# Dependência da interface para monitorar RAM. O restante vem do pyproject oficial.
+psutil>=7.0,<8
+

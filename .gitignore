@@ -1,0 +1,12 @@
+.venv/
+.cache/
+models/
+outputs/
+logs/
+__pycache__/
+*.pyc
+chatterbox/
+references/
+.app.lock
+
+

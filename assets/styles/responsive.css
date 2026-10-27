@@ -1,0 +1,37 @@
+/* Adaptação a telas e movimento reduzido. */
+
+@media (max-width: 1000px) {
+  #mesa-narracao { gap: 18px; }
+  #editor, #resultado-painel { padding: 21px; }
+}
+@media (max-width: 800px) {
+  #mesa-narracao { flex-direction: column !important; }
+  #editor, #resultado-painel { width: 100% !important; flex-basis: auto !important; }
+}
+@media (max-width: 520px) {
+  .studio-header { gap: 10px; padding: 20px 0; align-items: flex-start; }
+  .studio-symbol { width: 42px; height: 42px; flex-basis: 42px; }
+  .studio-name { font-size: 21px; }
+  .studio-tagline { font-size: 11px; }
+  .local-badge { padding: 8px 9px; font-size: 10px; gap: 5px; white-space: normal; max-width: 112px; line-height: 1.45; }
+  .studio-intro { padding: 22px 0 4px; }
+  .studio-intro h1 { font-size: 27px; letter-spacing: -.8px; }
+  .studio-intro p { font-size: 13px; }
+  #editor, #resultado-painel { padding: 18px 15px; border-radius: 20px; gap: 18px; }
+  #bloco-roteiro, #bloco-interpretacao { padding: 14px !important; border-radius: 15px !important; }
+  #campo-roteiro textarea { min-height: 250px; padding: 14px !important; font-size: 16px !important; }
+  #interpretacao { flex-direction: column; gap: 20px; }
+  #coluna-estilo, #coluna-velocidade { width: 100%; min-width: 0 !important; }
+  #acoes { flex-wrap: nowrap; }
+  #gerar { flex-grow: 2; min-width: 0 !important; }
+  #cancelar { flex-grow: 1; min-width: 0 !important; }
+  #gerar, #cancelar { padding: 12px 10px !important; font-size: 12px !important; }
+  #saida-abas [role="tab"] { padding: 10px 11px !important; }
+  #downloads { flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gradio-container *, .gradio-container *::before, .gradio-container *::after {
+    animation-duration: .01ms !important; transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
