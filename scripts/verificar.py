@@ -7,7 +7,7 @@ configure(offline=True)
 import hashlib
 import importlib.util
 import json
-import shutil
+from narrador.audio import encontrar_ffmpeg
 
 
 def main():
@@ -50,13 +50,13 @@ def main():
                   "torchaudio": torchaudio.__version__, "cuda": torch.version.cuda,
                   "cuda_disponivel": True, "gpu": torch.cuda.get_device_name(0),
                   "vram_gb": round(torch.cuda.get_device_properties(0).total_memory/1024**3, 2),
-                  "ffmpeg": shutil.which("ffmpeg"), "modelo": config["repo"],
+                  "ffmpeg": encontrar_ffmpeg(), "modelo": config["repo"],
                   "revisao": config["revision"], "hashes_verificados": "--hashes" in sys.argv}
         (LOGS / "ambiente.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"Componentes OK. {result['gpu']} | PyTorch {result['torch']} | CUDA {result['cuda']}.")
         print("Modelo local V3 pronto. Nenhuma instalação ou download será feito ao iniciar.")
         if not result["ffmpeg"]:
-            print("FFmpeg não encontrado: o WAV funciona; o MP3 ficará indisponível.")
+            raise RuntimeError("FFmpeg não encontrado. A exportação MP3 exige uma instalação local do FFmpeg.")
         return 0
     except Exception as exc:
         print(f"Não foi possível iniciar: {exc}")

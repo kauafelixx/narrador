@@ -15,7 +15,8 @@ from .events import connectEvents
 def buildInterface():
     voiceReferences = getVoiceReferences()
     voiceChoices = ["Voz padrão do modelo", *voiceReferences]
-    default = "audio1.ogg" if "audio1.ogg" in voiceReferences else voiceChoices[0]
+    default = next(iter(voiceReferences), voiceChoices[0])
+    defaultStyle = narrationStyles["Narrador natural"]
     waveform = gr.WaveformOptions(
         waveform_color="#F5C7A5",
         waveform_progress_color="#C94A0A",
@@ -103,7 +104,7 @@ def buildInterface():
                         elem_id="envio-referencia",
                     )
                     gr.Markdown(
-                        "O arquivo enviado tem prioridade sobre a voz da lista. Use de 3 a 10 segundos de fala limpa, sem música.",
+                        "O arquivo enviado tem prioridade sobre a voz da lista. Envie pelo menos 3 segundos de fala limpa, sem música. O modelo utiliza até 10 segundos da gravação.",
                         elem_classes="helper-copy",
                     )
                     voiceConsent = gr.Checkbox(
@@ -117,7 +118,7 @@ def buildInterface():
                     expressiveness = gr.Slider(
                         0.25,
                         1.5,
-                        value=0.5,
+                        value=defaultStyle.expressividade,
                         step=0.05,
                         label="Expressividade",
                         elem_classes=["studio-field", "studio-slider"],
@@ -125,7 +126,7 @@ def buildInterface():
                     temperature = gr.Slider(
                         0.1,
                         1.5,
-                        value=0.8,
+                        value=defaultStyle.temperatura,
                         step=0.05,
                         label="Temperatura (variação da interpretação)",
                         elem_classes=["studio-field", "studio-slider"],
@@ -133,7 +134,7 @@ def buildInterface():
                     cfg = gr.Slider(
                         0,
                         1,
-                        value=0.5,
+                        value=defaultStyle.cfg,
                         step=0.05,
                         label="CFG (aderência à voz / ritmo)",
                         elem_classes=["studio-field", "studio-slider"],
@@ -187,7 +188,6 @@ def buildInterface():
                             elem_id="player-principal",
                         )
                         with gr.Row(elem_id="downloads"):
-                            wav = gr.File(label="Baixar WAV", min_width=0, height=100)
                             mp3 = gr.File(label="Baixar MP3", min_width=0, height=100)
                         gr.Markdown(
                             "A narração completa fica disponível aqui ao terminar a geração.",
@@ -289,7 +289,6 @@ def buildInterface():
             segmentChoice=segmentChoice,
             segmentAudio=segmentAudio,
             regenerateButton=regenerateButton,
-            wav=wav,
             mp3=mp3,
             loadButton=loadButton,
             refreshButton=refreshButton,

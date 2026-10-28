@@ -8,7 +8,7 @@ Pasta: `C:\Users\kaua9\OneDrive\Documentos\narrador`.
 1. Dê dois cliques em **iniciar.bat**.
 2. Aguarde a verificação local. O navegador abre em **http://127.0.0.1:7860**.
 3. Escolha a referência de voz, cole o roteiro, escolha o estilo e clique em **Gerar narração**.
-4. Ouça o resultado e baixe WAV ou MP3. Tudo também fica em `outputs`.
+4. Ouça o resultado e baixe o MP3. Tudo também fica em `outputs`.
 5. Para encerrar, pressione **Ctrl+C** na janela do programa. Confirme o encerramento do lote se o Windows perguntar. Fechar a aba do navegador não encerra o servidor.
 
 Se você abrir `iniciar.bat` novamente enquanto o aplicativo já estiver rodando, a nova execução reconhece a instância existente e reabre seu endereço no navegador, sem iniciar outra geração ou mostrar uma falha de inicialização. O controle de instância única fica em `narrador/instance.py`.
@@ -52,11 +52,11 @@ O tokenizador oficial também inicializa componentes auxiliares para outros idio
 
 ## Vozes de referência
 
-Os 15 arquivos OGG fornecidos pelo usuário foram cadastrados. Há uma cópia WAV local de até 10 segundos de cada um em `references`; os originais em Downloads permanecem intactos. `references/catalogo.json` registra os nomes e as origens. `audio8 era pra ser o 7.ogg` conserva seu nome original.
+O catálogo ativo foi substituído por **audio-novo.mp3**, enviado em 28/10/2026. Uma cópia integral, com SHA-256 registrado em `references/catalogo.json`, fica em `references`; o original em Downloads permanece intacto. As referências antigas deixaram de aparecer na lista. Projetos antigos conservam suas próprias amostras.
 
-Selecione **um áudio por geração** na lista e ouça a prévia. O modelo usa uma referência de cada vez; os 15 arquivos não são misturados em uma voz. `audio1.ogg` é a seleção inicial. Também é possível enviar outra referência pela interface; esse arquivo tem prioridade sobre a lista. Escolher **Voz padrão do modelo** e deixar o envio vazio usa a voz interna do checkpoint.
+**audio-novo.mp3** é a seleção inicial. Ouça a prévia ou envie outra referência pela interface; esse arquivo tem prioridade sobre a lista. Escolher **Voz padrão do modelo** e deixar o envio vazio usa a voz interna do checkpoint.
 
-Use fala limpa, idealmente em português brasileiro, sem música ou outras pessoas. Uma amostra precisa ter pelo menos três segundos. São utilizados até dez segundos, conforme o condicionamento do modelo. O sotaque e a interpretação da referência influenciam o resultado. A confirmação de autorização deve permanecer marcada somente para áudios próprios ou autorizados.
+Use fala limpa em português brasileiro, sem música ou outras pessoas, com pelo menos três segundos. A preparação retira silêncio inicial, preserva até dez segundos em FLAC de 24 bits e aplica somente ganho constante, sem compressor nem filtro de timbre. A amostra nova fornece a identidade vocal e o sotaque; não existe um controle independente para remover o R regional. A semelhança precisa ser conferida ouvindo o resultado. A confirmação de autorização deve permanecer marcada somente para áudios próprios ou autorizados.
 
 Cada projeto salva a referência usada. Regenerar um segmento mantém essa referência para preservar a identidade vocal. Para trocar a referência de toda a narração, gere o roteiro inteiro novamente.
 
@@ -66,16 +66,18 @@ Os nomes dos estilos são sugestões de ajustes, não comandos emocionais do mod
 
 | Estilo | Expressividade | Temperatura | CFG | Máx. caracteres/trecho | Pausa entre frases / parágrafos |
 |---|---:|---:|---:|---:|---:|
-| Natural | 0,50 | 0,80 | 0,50 | 280 | 0,22 / 0,55 s |
+| Natural | 0,60 | 0,75 | 0,35 | 280 | 0,22 / 0,55 s |
 | Solene | 0,45 | 0,70 | 0,35 | 240 | 0,36 / 0,80 s |
 | Emocionante | 0,70 | 0,85 | 0,35 | 240 | 0,28 / 0,65 s |
 | Dramático | 0,80 | 0,85 | 0,30 | 220 | 0,40 / 0,85 s |
 | Suspense | 0,60 | 0,70 | 0,30 | 220 | 0,48 / 0,95 s |
 | Energético | 0,75 | 0,90 | 0,45 | 260 | 0,16 / 0,40 s |
 
-Expressividade aumenta a intensidade; temperatura aumenta a variação; CFG influencia o condicionamento. A reação é probabilística e depende da voz e do texto. Uma emoção específica não é garantida. Confira o áudio e regenere trechos quando necessário.
+Expressividade aumenta a intensidade; temperatura aumenta a variação; CFG influencia o condicionamento. Perguntas e exclamações conservam a pontuação na entrada do modelo e recebem um aumento moderado de intensidade, de 0,03 e 0,08, respectivamente, limitado ao máximo do controle. Pausas variam com perguntas, exclamações e reticências. Não são inseridas tags de emoção. A reação é probabilística e depende da voz e do texto. Confira o áudio e regenere trechos quando necessário.
 
-O controle **Velocidade** inclui **1,10**. O processamento usa `ffmpeg atempo`, que altera a duração preservando o tom. Na ausência do FFmpeg, a alternativa é `librosa.effects.time_stretch`; MP3 exige FFmpeg. A semente 0 escolhe uma nova variação; a semente efetiva é salva no projeto. Reprodutibilidade absoluta entre diferentes GPUs/versões não é garantida.
+Anos com contexto, como **no ano de 1830** e **em 1830**, são enviados à síntese como **mil oitocentos e trinta**. Datas válidas como **28/10/2026**, **28-10-2026** e **2026-10-28** recebem dia, mês e ano por extenso. Datas com pontos exigem o rótulo “dia” ou “data” para não confundir versões. O roteiro exibido permanece original; cada segmento salva também `texto_fala`. Números isolados, códigos, telefones e datas inválidas não são reinterpretados como datas. Acentos são preservados em Unicode NFC.
+
+O controle **Velocidade** inclui **1,10**. O processamento usa `ffmpeg atempo`, que altera a duração preservando o tom, na mesma etapa da exportação MP3 V0. FFmpeg é obrigatório e sua instalação WinGet também é procurada quando o PATH do aplicativo está desatualizado. A semente 0 escolhe uma nova variação; a semente efetiva é salva no projeto. Reprodutibilidade absoluta entre diferentes GPUs/versões não é garantida.
 
 ## Roteiros longos, histórico e segmentos
 
@@ -85,8 +87,8 @@ A aplicação suporta roteiros da ordem de dez minutos por meio de processamento
 - Abreviações comuns e números decimais são protegidos. O texto completo nunca é passado ao modelo de uma vez.
 - Um segmento é gerado por vez. Cada take é salvo imediatamente em WAV PCM de 24 bits e 24 kHz.
 - A montagem remove apenas silêncio nas bordas, conserva uma margem e insere pausas entre frases e parágrafos.
-- O volume de cada trecho é ajustado visando -20 LUFS, com ganho limitado a ±8 dB e controle de pico. É uma uniformização conservadora, não uma garantia de loudness final exato.
-- A exportação completa produz WAV PCM de 16 bits e, com FFmpeg, MP3 VBR. Os trechos originais são preservados.
+- A montagem inteira recebe ganho constante visando -18 LUFS, limitado a ±8 dB, com margem para picos da codificação. Isso preserva o contraste de volume entre falas e não comprime a interpretação; não é uma garantia de loudness final exato.
+- A exportação completa produz **somente MP3 VBR V0**, diretamente das amostras float32. Não são criados WAV base nem WAV final, e não há recodificação intermediária do MP3. Os takes internos WAV de 24 bits são preservados para edição e regeneração.
 - Escolha uma geração no histórico e clique em **Carregar geração**. Selecione um segmento para ouvi-lo ou regenerá-lo com os ajustes atuais. Os outros trechos permanecem e a montagem é refeita.
 - A regeneração de um trecho conserva a divisão e as pausas originais do projeto; alterar o estilo e gerar o roteiro inteiro aplica uma nova segmentação e novas pausas.
 - Se uma tarefa for cancelada, o histórico conserva os trechos prontos. Regere os pendentes um por vez, ou gere novamente o roteiro inteiro. A exportação completa aparece quando todos os segmentos estão disponíveis.
@@ -97,10 +99,8 @@ Estrutura de uma geração:
 ```text
 outputs/AAAAMMDD-HHMMSS-identificador/
   projeto.json                # texto, parâmetros, semente, duração e estado
-  referencia.wav              # referência desse projeto, quando usada
+  referencia.flac             # referência desse projeto, quando usada
   segmento_0001_<take>.wav     # cada trecho e seus takes
-  narracao_<versao>_base.wav   # montagem anterior ao ajuste de velocidade
-  narracao_<versao>.wav
   narracao_<versao>.mp3
 ```
 
@@ -128,7 +128,7 @@ O watermarker Perth oficial é mantido. A aplicação não o desativa.
 
 Os resultados reais da sessão são registrados em **RELATORIO_TESTES.md**. Os arquivos JSON em `logs` guardam medidas do hardware e das gerações. Não considere um teste concluído apenas porque o código correspondente existe.
 
-Exemplos já gerados: `outputs/teste_inicial.wav` (frase solicitada com a voz padrão) e `outputs/exemplo_com_referencia.wav` / `.mp3` (três segmentos com a referência `audio1.ogg`, a 1,1×).
+O exemplo atualizado com a nova referência fica em `outputs/exemplo_nova_voz.mp3`. Os scripts de diagnóstico e integração também usam a primeira referência do catálogo e exportam somente MP3. Resultados de testes anteriores não são regravados nem removidos do histórico.
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\verificar.py --hashes

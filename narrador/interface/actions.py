@@ -2,6 +2,7 @@
 
 import logging
 import subprocess
+from copy import deepcopy
 
 import gradio as gr
 import psutil
@@ -18,6 +19,10 @@ def showResult():
     return gr.Tabs(selected="resultado")
 
 
+def prepareGeneration():
+    return showResult(), None
+
+
 def getSegmentChoices(data):
     return [
         (f"{segment['numero']:02d} · {segment['texto'][:85]}", segmentIndex)
@@ -25,39 +30,77 @@ def getSegmentChoices(data):
     ]
 
 
-def getNarrationState(data, selectedSegment=None):
-    outputDirectory = OUTPUTS / data["id"]
-    result = data.get("resultado") or {}
-    wav = str(outputDirectory / result["wav"]) if result.get("wav") else None
-    mp3 = str(outputDirectory / result["mp3"]) if result.get("mp3") else None
-    segmentRows = [
+def getSegmentRows(data):
+    return [
         [
-            segment["numero"],
-            segment["texto"],
+            segment["numero"], segment["texto"],
             "Salvo" if segment.get("arquivo") else "Pendente",
             round(segment.get("duracao_s", 0), 1),
         ]
         for segment in data["segmentos"]
     ]
+
+
+def getStatusMessage(data):
+    result = data.get("resultado") or {}
     message = data.get("mensagem", data["status"])
     if result.get("duracao_s"):
-        message += f"\n\nDuração: {result['duracao_s'] / 60:.2f} min · WAV em 24 kHz · velocidade {data['parametros']['velocidade']:.2f}×."
+        speed = result.get("velocidade", data["parametros"]["velocidade"])
+        message += f"\n\nDuração: {result['duracao_s'] / 60:.2f} min · MP3 · velocidade {speed:.2f}×."
     if result.get("aviso"):
         message += f"\n\n{result['aviso']}"
-    if data.get("status") in ("cancelado", "erro", "parcial") and result.get("wav"):
+    if data.get("status") in ("cancelado", "erro", "parcial") and result.get("mp3"):
         message += "\n\nO reprodutor mantém a última exportação completa deste projeto."
+    return message
+
+
+def getNarrationState(data, selectedSegment=None, previousData=None):
+    """Atualiza somente os controles cujo conteúdo realmente mudou.
+
+    O controlador consulta o projeto a cada meio segundo. Recriar dropdowns e
+    tabelas em todas essas consultas reinicia seleção, player e renderização.
+    A comparação é local a cada geração, sem compartilhar estado entre sessões.
+    """
+    outputDirectory = OUTPUTS / data["id"]
+    result = data.get("resultado") or {}
+    mp3 = str(outputDirectory / result["mp3"]) if result.get("mp3") else None
+    segmentRows = getSegmentRows(data)
+    message = getStatusMessage(data)
     choices = getSegmentChoices(data)
     value = selectedSegment if selectedSegment is not None else 0 if choices else None
-    return (
-        data["id"],
-        message,
-        wav,
-        wav,
-        mp3,
-        gr.Dropdown(choices=choices, value=value),
-        segmentRows,
-        gr.Dropdown(choices=getHistory(), value=data["id"]),
-    )
+    firstUpdate = previousData is None or previousData["id"] != data["id"]
+    updates = [gr.skip() for _ in range(7)]
+    if firstUpdate:
+        updates[0] = data["id"]
+    if firstUpdate or message != getStatusMessage(previousData):
+        updates[1] = message
+    if firstUpdate or result.get("mp3") != (previousData.get("resultado") or {}).get("mp3"):
+        updates[2] = mp3
+        updates[3] = mp3
+    if firstUpdate or choices != getSegmentChoices(previousData):
+        updates[4] = gr.Dropdown(choices=choices, value=value)
+    if firstUpdate or segmentRows != getSegmentRows(previousData):
+        updates[5] = segmentRows
+    if firstUpdate or (
+        data.get("status") != previousData.get("status")
+        and data.get("status") in ("concluido", "cancelado", "erro", "parcial")
+    ):
+        updates[6] = gr.Dropdown(choices=getHistory(), value=data["id"])
+    return tuple(updates)
+
+
+def streamNarrationState(dataStream, progress, selectedSegment=None):
+    previousData = None
+    for data in dataStream:
+        state = getNarrationState(data, selectedSegment, previousData)
+        previousData = deepcopy(data)
+        if all(value == gr.skip() for value in state):
+            continue
+        progress(
+            (data.get("concluidos", 0), max(1, data.get("total_tarefa", 1))),
+            desc=data.get("mensagem", "Gerando…"),
+        )
+        yield state
 
 
 def generateNarration(
@@ -77,14 +120,11 @@ def generateNarration(
         parameters = validateParameters(
             styleChoice, expressiveness, temperature, cfg, speed, seed
         )
-        for data in audioController.gerar(
-            scriptText, voiceChoice, referenceUpload, voiceConsent, parameters
-        ):
-            progress(
-                (data.get("concluidos", 0), max(1, data.get("total_tarefa", 1))),
-                desc=data.get("mensagem", "Gerando…"),
-            )
-            yield getNarrationState(data)
+        yield from streamNarrationState(
+            audioController.gerar(
+                scriptText, voiceChoice, referenceUpload, voiceConsent, parameters
+            ), progress,
+        )
     except Exception as exc:
         logging.exception("Falha na geração")
         raise gr.Error(str(exc)) from exc
@@ -105,14 +145,11 @@ def regenerateSegment(
         parameters = validateParameters(
             styleChoice, expressiveness, temperature, cfg, speed, seed
         )
-        for data in audioController.gerar(
-            None, None, None, True, parameters, jobId, segmentIndex
-        ):
-            progress(
-                (data.get("concluidos", 0), 1),
-                desc=data.get("mensagem", "Regenerando…"),
-            )
-            yield getNarrationState(data, segmentIndex)
+        yield from streamNarrationState(
+            audioController.gerar(
+                None, None, None, True, parameters, jobId, segmentIndex
+            ), progress, segmentIndex,
+        )
     except Exception as exc:
         logging.exception("Falha na regeneração")
         raise gr.Error(str(exc)) from exc

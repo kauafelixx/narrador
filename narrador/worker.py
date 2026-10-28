@@ -24,6 +24,8 @@ def executar(job_id, selecionado=None, bloquear_rede=False):
     import soundfile as sf
     from chatterbox.mtl_tts import ChatterboxMultilingualTTS
     from .audio import montar
+    from .interpretacao import parametros_trecho, texto_para_modelo
+    from .texto import normalizar_fala
 
     pasta = OUTPUTS / job_id
     path = pasta / "projeto.json"
@@ -60,23 +62,25 @@ def executar(job_id, selecionado=None, bloquear_rede=False):
                    status="gerando", atual=i+1, concluidos=andamento, total_tarefa=len(indices))
             torch.manual_seed((params["semente"]+i) % (2**32))
             trecho_inicio = time.monotonic()
+            texto_fala = normalizar_fala(seg["texto"])
+            texto_modelo = texto_para_modelo(texto_fala)
+            interpretacao = parametros_trecho(texto_fala, params)
             with torch.inference_mode():
-                wav = model.generate(seg["texto"], language_id="pt",
-                                     exaggeration=params["expressividade"],
-                                     temperature=params["temperatura"], cfg_weight=params["cfg"])
+                wav = model.generate(texto_modelo, language_id="pt", **interpretacao)
             # Um take novo preserva o anterior em caso de cancelamento/regeneração.
             nome = f"segmento_{i+1:04d}_{uuid.uuid4().hex[:8]}.wav"
             sf.write(pasta / nome, wav.squeeze().numpy(), model.sr, subtype="PCM_24")
             if seg.get("arquivo"):
                 seg.setdefault("takes_anteriores", []).append(seg["arquivo"])
             seg.update(arquivo=nome, duracao_s=wav.numel()/model.sr,
-                       geracao_s=round(time.monotonic()-trecho_inicio, 2), parametros=dict(params))
+                       geracao_s=round(time.monotonic()-trecho_inicio, 2), parametros=dict(params),
+                       texto_fala=texto_fala, texto_modelo=texto_modelo, interpretacao=interpretacao)
             del wav
             gc.collect()
             torch.cuda.empty_cache()
             update(f"Segmento {i+1} salvo.", concluidos=andamento+1,
                    vram_pico_gb=round(torch.cuda.max_memory_allocated()/1024**3, 3))
-        update("Unindo os segmentos e exportando WAV/MP3…", status="exportando")
+        update("Unindo os segmentos e exportando MP3…", status="exportando")
         completo = all(s.get("arquivo") for s in data["segmentos"])
         if completo:
             final = montar(pasta, data["segmentos"], params["velocidade"],

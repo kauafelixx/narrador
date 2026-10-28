@@ -76,3 +76,32 @@ Três regressões reais entre processos Windows passaram: bloqueio de arquivo va
 Após as capturas de sobreposição enviadas pelo usuário, os agrupamentos compactos foram substituídos por colunas e o CSS foi corrigido para o DOM da versão instalada do Gradio. A validação visual real foi concluída em Chrome isolado com sandbox ativo e requisições limitadas à prévia local, em 320, 390, 768, 1024 e 1440 pixels.
 
 As cinco larguras passaram nas verificações de ausência de overflow horizontal, distância entre roteiro e estimativa, altura dos inputs de todos os sliders, fundos transparentes dos Forms e posicionamento das colunas. Imagens foram examinadas, incluindo os ajustes avançados abertos em celular. A suíte existente continuou com **8 testes aprovados** e os arquivos do motor permaneceram idênticos por SHA-256. As evidências estão em `logs/teste_alinhamento.json` e nas capturas `logs/layout-*.png` / `logs/ajustes-*.png`.
+
+## Nova referência, interpretação e exportação — 28/10/2026
+
+O catálogo ativo agora contém somente `audio-novo.mp3`, copiado integralmente do arquivo enviado pelo usuário. O SHA-256 da cópia foi comparado com o original e coincidiu. A gravação tem 58,889 s, estéreo, 44,1 kHz. A referência interna usa até dez segundos mono, FLAC PCM de 24 bits; os originais e projetos anteriores foram preservados.
+
+O estilo natural passou a expressividade 0,60, temperatura 0,75 e CFG 0,35. Perguntas e exclamações recebem variações moderadas no controle de expressividade, mantendo a pontuação. A entrada do motor trata aspas finais para impedir que a normalização oficial acrescente um ponto depois de `?` ou `!`. A interpretação usa somente argumentos presentes na API instalada; não foram inseridas tags de emoção nem alterados os pesos ou o código do Chatterbox. As orientações de controles foram conferidas no [README oficial da revisão instalada](https://github.com/resemble-ai/chatterbox/blob/5de7a54aa4e5e2baadb0182dde554908b48b85c2/README.md).
+
+A exportação final usa MP3 V0 em uma única passagem pelo FFmpeg, diretamente das amostras float32, com `atempo` quando necessário. Não há WAV base nem WAV final. Takes internos lossless continuam disponíveis para regeneração. O volume recebe ganho único na montagem, conservando o contraste entre frases; cortes nas bordas preservam finais fracos.
+
+Resultados executados nesta atualização:
+
+| Verificação | Resultado |
+|---|---|
+| Suíte automatizada completa | **29 testes aprovados**. Inclui datas válidas/inválidas, anos, identificadores, acentos, segmentação expandida, pontuação entre aspas, interpretação, preparação de referência, exportação, velocidade, falhas e estado da interface. |
+| Integridade local | `scripts/verificar.py --hashes` passou com os pesos e recursos locais. FFmpeg WinGet localizado mesmo com PATH desatualizado. |
+| Geração real na GPU com a nova referência | **Passou**, projeto `20261028-153823-8f378a`: três frases com ano 1830, data 28/10/2026, pergunta e exclamação. Entradas por extenso registradas em `projeto.json`. |
+| Regeneração real | **Passou**: segundo trecho ganhou outro take; nomes e hashes dos trechos 1 e 3 permaneceram iguais; take antigo preservado. |
+| Cancelamento real | **Passou** no segundo trecho do projeto `20261028-154030-00526c`; primeiro trecho preservado e processo do controlador liberado. |
+| Exportação MP3 real | **Passou**, sem WAV final/base. Amostra atualizada em `outputs/exemplo_nova_voz.mp3` e `outputs/exemplo_com_referencia.mp3`. |
+| Medidas da amostra final | 10,864 s, mono, 24 kHz, aproximadamente -18,00 LUFS e pico de -3,69 dBFS, sem amostras inválidas. |
+| Offline e concorrência | Conexões de socket bloqueadas nos workers de teste. Segunda geração simultânea rejeitada. |
+| Tempo e memória da integração | 166,2 s para geração, regeneração e cancelamento; pico de memória CUDA alocada de 3,452 GiB. |
+| Callbacks contra piscadas | Snapshots repetidos não chegam aos componentes; mudanças parciais não recriam seletor, player nem histórico. Testes verificam atualização somente da tabela ao salvar um trecho e manutenção da velocidade da última exportação em caso de cancelamento. |
+
+O teste HTTP passou com carregamento do histórico pela fila, seleção de segmento e download MP3. A conferência visual em Chrome isolado, com sandbox ativo e tráfego limitado ao servidor local, passou em 1440 e 390 pixels. A nova referência e a exportação somente MP3 foram verificadas. Evidências: `logs/teste_qualidade_ui.json`, `logs/qualidade-ui-1440.png` e `logs/qualidade-ui-390.png`.
+
+O teste visual de streaming usou controlador simulado, sem GPU, emitindo snapshots a cada 0,5 s: **380 observações em 19 segundos** confirmaram tabela e texto continuamente visíveis, seleção do segundo trecho preservada e ausência de overlay de progresso na tabela. Evidências: `logs/teste_streaming_ui.json` e `logs/qualidade-streaming.png`. O servidor de teste na porta 7861 foi encerrado; a versão final permaneceu aberta em `http://127.0.0.1:7860`. Os avisos `ResourceWarning` de event loop do Gradio durante a criação de interfaces de teste não impediram o término da suíte.
+
+Os testes confirmam as propriedades técnicas e os argumentos enviados à síntese. Não foi realizada avaliação auditiva subjetiva nem transcrição automática da saída. A redução do sotaque regional e a qualidade artística precisam ser avaliadas ouvindo o novo exemplo; o modelo não oferece um controle independente para remover uma realização específica do R.

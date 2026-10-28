@@ -12,6 +12,7 @@ from .actions import (
     getResources,
     getSegmentAudio,
     loadGeneration,
+    prepareGeneration,
     regenerateSegment,
     showResult,
 )
@@ -58,7 +59,6 @@ def connectEvents(elements: InterfaceElements, studio: gr.Blocks):
         elements.job,
         elements.status,
         elements.fullAudio,
-        elements.wav,
         elements.mp3,
         elements.segmentChoice,
         elements.segmentTable,
@@ -66,20 +66,29 @@ def connectEvents(elements: InterfaceElements, studio: gr.Blocks):
     ]
     for button in (elements.generateButton, elements.repeatButton):
         resultEvent = button.click(
-            showResult,
-            outputs=elements.outputTabs,
+            prepareGeneration,
+            outputs=[elements.outputTabs, elements.segmentAudio],
             queue=False,
             api_visibility="private",
         )
-        resultEvent.then(
+        generationEvent = resultEvent.then(
             generateNarration,
             generationInputs,
             generationOutputs,
             concurrency_id="gpu",
             concurrency_limit=1,
             trigger_mode="once",
+            show_progress="minimal",
+            show_progress_on=elements.status,
             api_visibility="private",
             api_name="gerar",
+        )
+        generationEvent.success(
+            getSegmentAudio,
+            [elements.job, elements.segmentChoice],
+            elements.segmentAudio,
+            show_progress="hidden",
+            api_visibility="private",
         )
     regenerateEvent = elements.regenerateButton.click(
         regenerateSegment,
@@ -88,13 +97,16 @@ def connectEvents(elements: InterfaceElements, studio: gr.Blocks):
         concurrency_id="gpu",
         concurrency_limit=1,
         trigger_mode="once",
+        show_progress="minimal",
+        show_progress_on=elements.status,
         api_visibility="private",
         api_name="regenerar",
     )
-    regenerateEvent.then(
+    regenerateEvent.success(
         getSegmentAudio,
         [elements.job, elements.segmentChoice],
         elements.segmentAudio,
+        show_progress="hidden",
         api_visibility="private",
     )
     elements.cancelButton.click(
@@ -107,6 +119,8 @@ def connectEvents(elements: InterfaceElements, studio: gr.Blocks):
         loadGeneration,
         elements.generationHistory,
         [*generationOutputs, elements.scriptText, *voiceSettings],
+        concurrency_id="gpu",
+        concurrency_limit=1,
         api_visibility="private",
         api_name="carregar",
     )
@@ -116,16 +130,24 @@ def connectEvents(elements: InterfaceElements, studio: gr.Blocks):
         queue=False,
         api_visibility="private",
     )
+    loadEvent.success(
+        getSegmentAudio,
+        [elements.job, elements.segmentChoice],
+        elements.segmentAudio,
+        show_progress="hidden",
+        api_visibility="private",
+    )
     elements.refreshButton.click(
         lambda: gr.Dropdown(choices=getHistory()),
         outputs=elements.generationHistory,
         queue=False,
         api_visibility="private",
     )
-    elements.segmentChoice.change(
+    elements.segmentChoice.input(
         getSegmentAudio,
         [elements.job, elements.segmentChoice],
         elements.segmentAudio,
+        show_progress="hidden",
         api_visibility="private",
         api_name="ouvir_segmento",
     )

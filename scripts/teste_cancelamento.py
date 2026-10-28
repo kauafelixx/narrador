@@ -8,7 +8,7 @@ import json
 import os
 import time
 import psutil
-from narrador.controller import Controlador, validar_parametros
+from narrador.controller import Controlador, validar_parametros, referencias
 
 os.environ["NARRADOR_TEST_BLOCK_NETWORK"] = "1"
 controller = Controlador()
@@ -17,7 +17,7 @@ pids = []
 inferencia_inicio = None
 inicio = time.monotonic()
 for data in controller.gerar("Uma história antiga começava naquela noite, quando as ruas de Paris estavam silenciosas e uma jovem caminhava pela cidade.",
-                             "audio1.ogg", None, True, params):
+                             next(iter(referencias())), None, True, params):
     if data.get("status") == "gerando":
         if inferencia_inicio is None:
             inferencia_inicio = time.monotonic()

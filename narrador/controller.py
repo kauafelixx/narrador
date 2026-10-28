@@ -1,7 +1,6 @@
 import atexit
 import json
 import random
-import shutil
 import subprocess
 import sys
 import threading
@@ -80,24 +79,16 @@ class Controlador:
 
     def _referencia(self, pasta, nome, upload, consentimento):
         referencia = upload or referencias().get(nome)
+        if nome and nome != "Voz padrão do modelo" and not referencia:
+            raise ValueError("A voz selecionada não está mais no catálogo. Escolha a nova referência.")
         if not referencia:
             return None
         if not consentimento:
             raise ValueError("Confirme que o áudio é seu ou que você tem autorização para usá-lo.")
-        import soundfile as sf
-        # O componente Gradio recebe uploads locais; nada é enviado à nuvem.
-        try:
-            info = sf.info(str(referencia))
-            if info.duration < 3:
-                raise ValueError("Use uma referência com pelo menos 3 segundos de fala limpa.")
-            with sf.SoundFile(str(referencia)) as stream:
-                wav = stream.read(frames=min(len(stream), int(info.samplerate*10)),
-                                  dtype="float32", always_2d=True).mean(axis=1)
-            destino = pasta / "referencia.wav"
-            sf.write(destino, wav, info.samplerate, subtype="PCM_16")
-            return destino.name
-        except RuntimeError as exc:
-            raise ValueError("Não foi possível ler a referência. Use um arquivo WAV, OGG, FLAC ou MP3 válido.") from exc
+        from .referencia import preparar_referencia
+        destino = pasta / "referencia.flac"
+        preparar_referencia(referencia, destino)
+        return destino.name
 
     def gerar(self, texto, nome_ref, upload, consentimento, params, job_id=None, segmento=None):
         if not self.lock.acquire(blocking=False):
@@ -106,12 +97,17 @@ class Controlador:
         data = None
         try:
             self.cancelado.clear()
+            from .audio import encontrar_ffmpeg
+            if not encontrar_ffmpeg():
+                raise ValueError("FFmpeg não encontrado. A exportação MP3 exige uma instalação local do FFmpeg.")
             if job_id:
                 data = ler_job(job_id)
                 if segmento is None or not 0 <= int(segmento) < len(data["segmentos"]):
                     raise ValueError("Selecione um segmento válido para regenerar.")
                 segmento = int(segmento)
                 pasta = OUTPUTS / job_id
+                if data.get("resultado"):
+                    data["resultado"].setdefault("velocidade", data["parametros"]["velocidade"])
                 data["parametros"] = params
                 # Usa a referência original desse projeto para manter a identidade vocal.
                 data["status"] = "aguardando"

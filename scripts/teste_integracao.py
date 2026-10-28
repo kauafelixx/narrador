@@ -9,7 +9,8 @@ import hashlib
 import json
 import os
 import time
-from narrador.controller import Controlador, validar_parametros
+from narrador.controller import Controlador, validar_parametros, referencias
+from narrador.texto import ESTILOS
 
 
 def hashfile(path):
@@ -32,12 +33,15 @@ def acompanhar(generator):
 def main():
     os.environ["NARRADOR_TEST_BLOCK_NETWORK"] = "1"
     controller = Controlador()
-    params = validar_parametros("Narrador solene", .45, .7, .35, 1.1, 12345)
-    texto = ("Em 1830, no coração de Paris, uma jovem religiosa testemunharia um acontecimento que marcaria para sempre a história da Igreja.\n\n"
-             "As ruas guardavam lembranças de uma época de fé e transformação. "
-             "Uma nova página dessa história começava naquela noite.")
+    estilo = ESTILOS["Narrador natural"]
+    params = validar_parametros("Narrador natural", estilo.expressividade,
+                                estilo.temperatura, estilo.cfg, 1, 12345)
+    referencia = next(iter(referencias()))
+    texto = ("No ano de 1830, uma nova história começou.\n\n"
+             "Em 28/10/2026, ela perguntou: será que conseguimos? "
+             "Sim, conseguimos!")
     inicio = time.monotonic()
-    generator = controller.gerar(texto, "audio1.ogg", None, True, params)
+    generator = controller.gerar(texto, referencia, None, True, params)
     first = next(generator)
     try:
         next(controller.gerar("Outra geração.", None, None, True, params))
@@ -49,6 +53,12 @@ def main():
     assert final.get("rede_bloqueada_teste")
     assert len(final["segmentos"]) == 3
     assert final["resultado"]["mp3"]
+    assert "wav" not in final["resultado"]
+    assert not list(folder.glob("narracao*.wav"))
+    assert "mil oitocentos e trinta" in final["segmentos"][0]["texto_fala"]
+    assert "vinte e oito de outubro de dois mil e vinte e seis" in final["segmentos"][1]["texto_fala"]
+    assert final["segmentos"][1]["texto_fala"].endswith("?")
+    assert final["segmentos"][2]["texto_fala"].endswith("!")
     original = [(s["arquivo"], hashfile(folder / s["arquivo"])) for s in final["segmentos"]]
     params2 = dict(params, temperatura=.75, semente=22222)
     regen = acompanhar(controller.gerar(None, None, None, True, params2, final["id"], 1))
@@ -59,7 +69,7 @@ def main():
     assert (folder / original[1][0]).exists(), "Take anterior não foi preservado"
     # Cancela durante o segundo segmento e verifica a preservação do primeiro.
     cancelado = None
-    for data in controller.gerar(texto, "audio2.ogg", None, True, params):
+    for data in controller.gerar(texto, referencia, None, True, params):
         if data.get("status") == "gerando" and data.get("atual") == 2:
             controller.cancelar()
         cancelado = data
@@ -67,9 +77,10 @@ def main():
     assert cancelado["segmentos"][0]["arquivo"]
     assert controller.process is None
     assert not controller.lock.locked()
-    report = {"referencia": "audio1.ogg (10 segundos)", "segmentos": 3,
+    report = {"referencia": referencia + " (até 10 segundos)", "segmentos": 3,
               "job": final["id"], "cancelado_job": cancelado["id"],
-              "rede_bloqueada": True, "wav": True, "mp3": True, "velocidade": 1.1,
+              "rede_bloqueada": True, "exportacao_apenas_mp3": True, "velocidade": 1,
+              "datas_anos_por_extenso": True, "pontuacao_preservada": True,
               "regeneracao_segmento_preservou_outros": True,
               "cancelamento_preservou_primeiro_segmento": True,
               "bloqueio_geracoes_simultaneas": True,

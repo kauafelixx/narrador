@@ -50,20 +50,20 @@ def main():
     loaded = evento(config, "carregar", [job_id])
     # gr.State é omitido na serialização para o navegador; os outros outputs são reais.
     assert "Narração concluída" in loaded[1]
-    assert loaded[2]["path"].endswith(".wav")
-    assert loaded[4]["path"].endswith(".mp3")
-    assert len(loaded[6]["data"]) == 3
+    assert loaded[2]["path"].endswith(".mp3")
+    assert loaded[3]["path"].endswith(".mp3")
+    assert len(loaded[5]["data"]) == 3
     selected = evento(config, "ouvir_segmento", [None, 1])
     assert selected[0]["path"].endswith(".wav")
     # Confere também a entrega dos arquivos reais pelo servidor local.
     data = json.loads((OUTPUTS/job_id/"projeto.json").read_text(encoding="utf-8"))
-    for name in (data["resultado"]["wav"], data["resultado"]["mp3"]):
+    for name in (data["resultado"]["mp3"],):
         path = str(OUTPUTS/job_id/name).replace("\\", "/")
         with urlopen(BASE+"/gradio_api/file="+quote(path, safe="/:"), timeout=15) as response:
             assert response.status == 200
             assert len(response.read(1024)) == 1024
     result = {"http": 200, "componentes": len(config["components"]),
-              "carregamento_historico_via_fila": True, "downloads_wav_mp3": True,
+              "carregamento_historico_via_fila": True, "download_mp3": True,
               "analitica_desativada": True, "apis_publicas": False,
               "idioma_pt_br_configurado": True, "verificacao_visual": "não faz parte do teste HTTP"}
     (LOGS/"teste_interface.json").write_text(json.dumps(result, ensure_ascii=False, indent=2),encoding="utf-8")

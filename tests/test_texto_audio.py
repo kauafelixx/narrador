@@ -51,13 +51,14 @@ class TextoAudioTests(unittest.TestCase):
             normal = montar(pasta, segs, 1, "normal")
             fast = montar(pasta, segs, 1.1, "rapido")
             self.assertAlmostEqual(normal["duracao_s"]/fast["duracao_s"], 1.1, delta=.03)
-            y, _ = sf.read(pasta / fast["wav"])
+            y, _ = sf.read(pasta / fast["mp3"])
             spectrum = np.abs(np.fft.rfft(y[:sr]))
             frequency = np.argmax(spectrum)
             self.assertAlmostEqual(frequency, 220, delta=3)
             self.assertLessEqual(np.max(np.abs(y)), .96)
-            if __import__("shutil").which("ffmpeg"):
-                self.assertTrue((pasta / fast["mp3"]).is_file())
+            self.assertTrue((pasta / fast["mp3"]).is_file())
+            self.assertNotIn("wav", fast)
+            self.assertEqual({p.name for p in pasta.glob("*.wav")}, {"a.wav", "b.wav"})
 
 
 if __name__ == "__main__":

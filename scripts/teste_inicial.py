@@ -18,6 +18,11 @@ if "--bloquear-rede" in sys.argv:
     socket.create_connection = blocked
 
 from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+from narrador.audio import montar
+from narrador.controller import referencias
+from narrador.interpretacao import parametros_trecho, texto_para_modelo
+from narrador.referencia import preparar_referencia
+from narrador.texto import normalizar_fala, ESTILOS
 
 assert torch.cuda.is_available(), "CUDA indisponível neste ambiente Python."
 torch.set_num_threads(4)
@@ -31,18 +36,27 @@ else:
     model = ChatterboxMultilingualTTS.from_local(config["directory"], device="cuda", t3_model="v3")
 loaded = time.monotonic()
 text = "Em 1830, no coração de Paris, uma jovem religiosa testemunharia um acontecimento que marcaria para sempre a história da Igreja."
+style = ESTILOS["Narrador natural"]
+params = {"expressividade": style.expressividade, "temperatura": style.temperatura, "cfg": style.cfg}
+suffix = "offline" if "--bloquear-rede" in sys.argv else "inicial"
+folder = OUTPUTS / ("diagnostico_" + time.strftime("%Y%m%d-%H%M%S"))
+folder.mkdir(parents=True, exist_ok=False)
+ref_name, ref_path = next(iter(referencias().items()))
+preparar_referencia(ref_path, folder / "referencia.flac")
+model.prepare_conditionals(str(folder / "referencia.flac"), exaggeration=style.expressividade)
 torch.manual_seed(42)
 with torch.inference_mode():
-    audio = model.generate(text, language_id="pt", exaggeration=0.5, temperature=0.8, cfg_weight=0.5)
-suffix = "offline" if "--bloquear-rede" in sys.argv else "inicial"
-path = OUTPUTS / f"teste_{suffix}.wav"
-sf.write(path, audio.squeeze().numpy(), model.sr, subtype="PCM_16")
+    audio = model.generate(texto_para_modelo(normalizar_fala(text)), language_id="pt", **parametros_trecho(text, params))
+sf.write(folder / "segmento_0001.wav", audio.squeeze().numpy(), model.sr, subtype="PCM_24")
+export = montar(folder, [{"arquivo": "segmento_0001.wav", "pausa": 0}], nome=f"teste_{suffix}")
+path = folder / export["mp3"]
 result = {"gpu": torch.cuda.get_device_name(), "torch": torch.__version__,
           "cuda": torch.version.cuda, "modelo": "Multilingual V3", "idioma": "pt",
           "carregamento_s": loaded-start, "geracao_s": time.monotonic()-loaded,
           "duracao_s": audio.numel()/model.sr, "sample_rate": model.sr,
           "vram_pico_gb": torch.cuda.max_memory_allocated()/1024**3,
-          "rede_bloqueada": "--bloquear-rede" in sys.argv, "arquivo": str(path)}
+          "rede_bloqueada": "--bloquear-rede" in sys.argv, "arquivo": str(path), "referencia": ref_name,
+          "texto_fala": normalizar_fala(text)}
 (LOGS / f"teste_{suffix}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
 print(json.dumps(result, ensure_ascii=False, indent=2), flush=True)
 del model, audio

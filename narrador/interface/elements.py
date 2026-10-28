@@ -34,7 +34,6 @@ class InterfaceElements:
     segmentChoice: gr.Dropdown
     segmentAudio: gr.Audio
     regenerateButton: gr.Button
-    wav: gr.File
     mp3: gr.File
     loadButton: gr.Button
     refreshButton: gr.Button
